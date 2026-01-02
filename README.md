@@ -1,11 +1,3 @@
-
-
-Baik, saya mengerti. Terkadang format kode blok bisa sulit untuk disalin seluruhnya.
-
-Saya akan berikan versi teks biasa di bawah ini. Anda bisa langsung memblok semua teks dari awal hingga akhir, lalu salin dan tempelkan ke file `README.md` Anda.
-
----
-
 # TikTok Downloader
 
 [![Node.js Version](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg)](https://nodejs.org/)
@@ -167,8 +159,4 @@ Aplikasi ini dibuat untuk tujuan pendidikan dan penggunaan pribadi. Mohon hormat
 
 ## Author
 
-Dibuat dengan Node.js oleh [Nama Anda](https://github.com/USERNAME_GITHUB_ANDA)
-
----
-
-Coba salin teks di atas. Semoga ini lebih mudah
+Dibuat dengan Node.js oleh [Ahmad Putra Ramadhan](https://github.com/ahm4d-putra)
