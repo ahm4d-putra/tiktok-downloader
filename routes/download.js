@@ -5,6 +5,63 @@ const router = express.Router();
 const tiktokService = require("../services/tiktokService");
 const axios = require("axios");
 
+// Fungsi untuk mengirim notifikasi ke Discord
+async function sendDiscordNotification(videoInfo) {
+  const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
+
+  // Jika webhook URL tidak diatur, jangan lakukan apa-apa
+  if (!webhookUrl) {
+    console.log("[Discord] Webhook URL not found. Skipping notification.");
+    return;
+  }
+
+  // Buat pesan embed yang menarik
+  const discordPayload = {
+    embeds: [
+      {
+        title: "🎉 Video TikTok Berhasil Diunduh!",
+        url: `https://www.tiktok.com/@${videoInfo.author.username}/video/${videoInfo.id}`,
+        color: 16711680, // Warna merah TikTok dalam format desimal
+        author: {
+          name: videoInfo.author.nickname || videoInfo.author.username,
+          icon_url: videoInfo.author.avatar,
+          url: `https://www.tiktok.com/@${videoInfo.author.username}`,
+        },
+        description: videoInfo.description || "*Tidak ada deskripsi*",
+        thumbnail: {
+          url: videoInfo.thumbnail,
+        },
+        fields: [
+          {
+            name: "👤 Pengguna",
+            value: `@${videoInfo.author.username}`,
+            inline: true,
+          },
+          {
+            name: "🎵 Musik",
+            value: videoInfo.music || "Tidak diketahui",
+            inline: true,
+          },
+        ],
+        footer: {
+          text: "TikTok Downloader by Nama Anda",
+          icon_url: "https://i.imgur.com/your-logo.png", // Ganti dengan logo Anda jika ada
+        },
+        timestamp: new Date().toISOString(),
+      },
+    ],
+  };
+
+  try {
+    await axios.post(webhookUrl, discordPayload, {
+      headers: { "Content-Type": "application/json" },
+    });
+    console.log("[Discord] Notification sent successfully!");
+  } catch (error) {
+    console.error("[Discord] Failed to send notification:", error.message);
+  }
+}
+
 // POST /api/download - Get video info (untuk ditampilkan di UI)
 router.post("/download", async (req, res) => {
   try {
@@ -42,7 +99,6 @@ router.post("/download-stream", async (req, res) => {
 
     console.log(`[Download Stream] Fetching fresh video info for: ${url}`);
 
-    // 1. Ambil info video sekali lagi untuk mendapatkan URL yang segar
     const videoInfo = await tiktokService.getVideoInfo(url);
     const downloadUrl =
       videoInfo.downloadUrls.noWatermark ||
@@ -56,7 +112,6 @@ router.post("/download-stream", async (req, res) => {
 
     console.log(`[Download Stream] Streaming from fresh URL: ${downloadUrl}`);
 
-    // 2. Lakukan proxy request ke URL video dan stream ke klien
     const response = await axios({
       method: "GET",
       url: downloadUrl,
@@ -70,7 +125,6 @@ router.post("/download-stream", async (req, res) => {
       timeout: 30000,
     });
 
-    // 3. Set header untuk response ke klien
     const filename = `tiktok-${videoInfo.author.username || "video"}-${
       videoInfo.id
     }.mp4`;
@@ -78,7 +132,11 @@ router.post("/download-stream", async (req, res) => {
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
     res.setHeader("Content-Length", response.headers["content-length"]);
 
-    // 4. Alirkan (pipe) video dari server TikTok ke browser user
+    // --- PEMANGGILAN NOTIFIKASI DISCORD ---
+    // Kirim notifikasi tanpa menunggu (non-blocking)
+    sendDiscordNotification(videoInfo);
+    // -----------------------------------------
+
     response.data.pipe(res);
 
     response.data.on("error", (err) => {
