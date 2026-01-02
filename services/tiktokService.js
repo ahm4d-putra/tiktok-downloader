@@ -1,9 +1,8 @@
-
 const axios = require("axios");
 
 class TikTokService {
   constructor() {
-  //api tikwm
+    //api tikwm
     this.primaryApi = "https://tikwm.com/api/";
 
     // Realistic User-Agent
@@ -16,7 +15,7 @@ class TikTokService {
    */
   validateUrl(url) {
     const tiktokRegex =
-      /^https?:\/\/(www\.)?(tiktok\.com|vm\.tiktok\.com|t\.tiktok\.com)\/.+$/;
+      /^https?:\/\/(www\.)?(tiktok\.com|vm\.tiktok\.com|t\.tiktok\.com|vt\.tiktok\.com)\/.+$/;
     if (!tiktokRegex.test(url)) {
       throw new Error("Invalid TikTok URL format");
     }
@@ -80,7 +79,7 @@ class TikTokService {
           "Accept-Language": "en-US,en;q=0.9",
           Referer: "https://www.tiktok.com/",
         },
-        timeout: 20000, 
+        timeout: 20000,
       });
 
       console.log("[TikTokService] API Response Status:", response.status);
@@ -153,8 +152,12 @@ class TikTokService {
     try {
       this.validateUrl(url);
 
-      // kalo url pendek di pecah
-      if (url.includes("vm.tiktok.com") || url.includes("t.tiktok.com")) {
+      // Jika ini adalah URL pendek, resolve terlebih dahulu
+      if (
+        url.includes("vm.tiktok.com") ||
+        url.includes("t.tiktok.com") ||
+        url.includes("vt.tiktok.com")
+      ) {
         console.log(`[TikTokService] Resolving short URL: ${url}`);
         url = await this.resolveShortUrl(url);
       }

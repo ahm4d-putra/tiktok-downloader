@@ -22,17 +22,15 @@ class TikTokDownloader {
         if (this.isValidTikTokUrl(text) && !this.urlInput.value) {
           this.urlInput.value = text;
         }
-      } catch (err) {
-      }
+      } catch (err) {}
     });
   }
 
   isValidTikTokUrl(url) {
     const tiktokRegex =
-      /^https?:\/\/(www\.)?(tiktok\.com|vm\.tiktok\.com|t\.tiktok\.com)\/.+$/;
+      /^https?:\/\/(www\.)?(tiktok\.com|vm\.tiktok\.com|t\.tiktok\.com|vt\.tiktok\.com)\/.+$/;
     return tiktokRegex.test(url);
   }
-
   async handleSubmit(e) {
     e.preventDefault();
 
