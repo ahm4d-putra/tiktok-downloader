@@ -43,7 +43,7 @@ Ikuti langkah-langkah berikut untuk mengatur project ini di komputer lokal Anda.
 
 1.  **Clone Repository**
     ```bash
-    git clone https://github.com/USERNAME_GITHUB_ANDA/tiktok-downloader.git
+    git clone https://github.com/ahm4d-putra/tiktok-downloader.git
     ```
 
 2.  **Masuk ke Folder Project**
