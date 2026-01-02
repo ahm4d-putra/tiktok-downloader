@@ -6,8 +6,16 @@ class TikTokDownloader {
     this.errorMessage = document.getElementById("errorMessage");
     this.resultContainer = document.getElementById("resultContainer");
 
-    // Simpan url asli
     this.originalTiktokUrl = "";
+
+    // Elemen untuk fitur baru
+    this.shareBtn = document.getElementById("shareBtn");
+    this.shareModal = document.getElementById("shareModal");
+    this.closeBtn = document.querySelector(".close-btn");
+    this.copyLinkBtn = document.getElementById("copyLinkBtn");
+    this.historyPanel = document.getElementById("historyPanel");
+    this.historyList = document.getElementById("historyList");
+    this.clearHistoryBtn = document.getElementById("clearHistoryBtn");
 
     this.init();
   }
@@ -22,20 +30,171 @@ class TikTokDownloader {
         if (this.isValidTikTokUrl(text) && !this.urlInput.value) {
           this.urlInput.value = text;
         }
-      } catch (err) {}
+      } catch (err) {
+        /* Ignore */
+      }
+    });
+
+    // --- Event Listener untuk Fitur Bagikan ---
+    this.shareBtn.addEventListener("click", this.handleShare.bind(this));
+    this.closeBtn.addEventListener(
+      "click",
+      () => (this.shareModal.style.display = "none")
+    );
+    window.addEventListener("click", (e) => {
+      if (e.target === this.shareModal) {
+        this.shareModal.style.display = "none";
+      }
+    });
+    this.copyLinkBtn.addEventListener("click", this.copyAppLink.bind(this));
+
+    // --- Event Listener untuk Fitur Riwayat ---
+    this.clearHistoryBtn.addEventListener(
+      "click",
+      this.clearHistory.bind(this)
+    );
+
+    // Muat riwayat saat halaman dimuat
+    this.loadHistory();
+  }
+
+  // --- FITUR BAGIKAN ---
+  handleShare() {
+    const shareData = {
+      title: "TikTok Downloader - Unduh Video Tanpa Watermark",
+      text: "Coba aplikasi web ini untuk mengunduh video TikTok dengan mudah dan cepat!",
+      url: window.location.href,
+    };
+
+    if (navigator.share) {
+      navigator
+        .share(shareData)
+        .catch((err) => console.log("Error sharing:", err));
+    } else {
+      // Tampilkan modal jika Web Share API tidak didukung
+      this.populateShareLinks(shareData);
+      this.shareModal.style.display = "block";
+    }
+  }
+
+  populateShareLinks(data) {
+    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
+      data.text + " " + data.url
+    )}`;
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(
+      data.text + " " + data.url
+    )}`;
+
+    document.getElementById("shareTwitter").href = twitterUrl;
+    document.getElementById("shareWhatsapp").href = whatsappUrl;
+  }
+
+  async copyAppLink() {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      this.copyLinkBtn.textContent = "Tersalin!";
+      setTimeout(() => {
+        this.copyLinkBtn.innerHTML =
+          '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path></svg> Salin Link';
+      }, 2000);
+    } catch (err) {
+      console.error("Failed to copy link: ", err);
+    }
+  }
+
+  // --- FITUR RIWAYAT ---
+  saveToHistory(videoData) {
+    let history = JSON.parse(localStorage.getItem("tiktokHistory")) || [];
+
+    // Cek apakah video sudah ada di riwayat
+    const existingIndex = history.findIndex((item) => item.id === videoData.id);
+    if (existingIndex > -1) {
+      history.splice(existingIndex, 1); // Hapus yang lama
+    }
+
+    const historyItem = {
+      id: videoData.id,
+      author: videoData.author,
+      thumbnail: videoData.thumbnail,
+      description: videoData.description,
+      timestamp: new Date().toISOString(),
+    };
+
+    history.unshift(historyItem); // Tambahkan ke awal array
+
+    // Batasi riwayat hanya 20 item terakhir
+    if (history.length > 20) {
+      history = history.slice(0, 20);
+    }
+
+    localStorage.setItem("tiktokHistory", JSON.stringify(history));
+    this.loadHistory(); // Perbarui tampilan
+  }
+
+  loadHistory() {
+    const history = JSON.parse(localStorage.getItem("tiktokHistory")) || [];
+    this.historyList.innerHTML = ""; // Kosongkan dulu
+
+    if (history.length === 0) {
+      this.historyList.innerHTML =
+        '<p class="empty-history">Belum ada riwayat unduhan.</p>';
+      return;
+    }
+
+    history.forEach((item) => {
+      const historyEl = document.createElement("div");
+      historyEl.className = "history-item";
+      historyEl.innerHTML = `
+                <img src="${item.thumbnail}" alt="Thumbnail">
+                <div class="history-item-info">
+                    <div class="history-item-author">@${
+                      item.author.username
+                    }</div>
+                    <div class="history-item-desc">${
+                      item.description || "Tidak ada deskripsi"
+                    }</div>
+                </div>
+                <button class="remove-history-item" data-id="${
+                  item.id
+                }">&times;</button>
+            `;
+      this.historyList.appendChild(historyEl);
+    });
+
+    // Tambahkan event listener untuk tombol hapus item
+    document.querySelectorAll(".remove-history-item").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        this.removeFromHistory(e.target.dataset.id);
+      });
     });
   }
 
+  removeFromHistory(id) {
+    let history = JSON.parse(localStorage.getItem("tiktokHistory")) || [];
+    history = history.filter((item) => item.id !== id);
+    localStorage.setItem("tiktokHistory", JSON.stringify(history));
+    this.loadHistory(); // Perbarui tampilan
+  }
+
+  clearHistory() {
+    if (confirm("Apakah Anda yakin ingin menghapus semua riwayat?")) {
+      localStorage.removeItem("tiktokHistory");
+      this.loadHistory();
+    }
+  }
+
+  // --- FUNGSI UTAMA APLIKASI ---
   isValidTikTokUrl(url) {
     const tiktokRegex =
       /^https?:\/\/(www\.)?(tiktok\.com|vm\.tiktok\.com|t\.tiktok\.com|vt\.tiktok\.com)\/.+$/;
     return tiktokRegex.test(url);
   }
+
   async handleSubmit(e) {
     e.preventDefault();
 
     const url = this.urlInput.value.trim();
-    this.originalTiktokUrl = url; // Simpan URL asli
+    this.originalTiktokUrl = url;
 
     if (!url) {
       this.showError("Silakan masukkan URL TikTok");
@@ -65,6 +224,7 @@ class TikTokDownloader {
       }
 
       this.displayResult(data.data);
+      this.saveToHistory(data.data); // SIMPAN KE RIWAYAT
     } catch (error) {
       this.showError(error.message || "Terjadi kesalahan. Silakan coba lagi.");
       console.error("Download error:", error);
@@ -73,12 +233,10 @@ class TikTokDownloader {
     }
   }
 
-  // function download
   async handleDownload(videoId, filename) {
     const button = document.getElementById(videoId);
     const originalText = button.innerHTML;
 
-    // loading state
     button.innerHTML =
       '<div class="spinner" style="display: inline-block; width: 16px; height: 16px;"></div> Mengunduh...';
     button.disabled = true;
@@ -95,13 +253,8 @@ class TikTokDownloader {
         throw new Error(errorText || "Gagal memulai unduhan.");
       }
 
-      // Ambil data sebagai Blob
       const blob = await response.blob();
-
-      // Buat URL sementara untuk Blob
       const blobUrl = window.URL.createObjectURL(blob);
-
-      // Buat link <a> sementara untuk trigger download
       const a = document.createElement("a");
       a.style.display = "none";
       a.href = blobUrl;
@@ -109,14 +262,12 @@ class TikTokDownloader {
       document.body.appendChild(a);
       a.click();
 
-      // Bersihkan
       window.URL.revokeObjectURL(blobUrl);
       document.body.removeChild(a);
     } catch (error) {
       this.showError(`Gagal mengunduh: ${error.message}`);
       console.error("Stream download error:", error);
     } finally {
-      // tombol kekeadaan semula
       button.innerHTML = originalText;
       button.disabled = false;
     }
@@ -149,6 +300,7 @@ class TikTokDownloader {
   }
 
   displayResult(videoData) {
+    // ... (Kode displayResult tetap sama seperti sebelumnya) ...
     const thumbnail = document.getElementById("thumbnail");
     thumbnail.src = videoData.thumbnail;
     thumbnail.onerror = () => {
@@ -185,7 +337,6 @@ class TikTokDownloader {
       videoData.commentCount || 0
     );
 
-    // --- BUTTON UNDUH ---
     const downloadNoWatermark = document.getElementById("downloadNoWatermark");
     const downloadWithWatermark = document.getElementById(
       "downloadWithWatermark"
